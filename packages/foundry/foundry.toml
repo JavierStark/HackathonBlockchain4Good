@@ -6,38 +6,71 @@ fs_permissions = [{ access = "read-write", path = "./"}]
 extra_output = ["evm.bytecode.opcodes"]
 optimizer = true
 optimizer_runs = 200
+# Pinned for reproducible builds (matches pragma ranges of every .sol file here).
+# Bump deliberately, not silently — CI's foundry-toolchain version stays independent
+# of this and will fetch this solc version via svm automatically.
+solc = "0.8.37"
+# "cancun" is live on Ethereum mainnet/Sepolia and on every L2 in [rpc_endpoints]
+# below as of writing. Pin explicitly so bytecode is deterministic across machines
+# instead of silently tracking whatever forge's default happens to be.
+evm_version = "cancun"
 
+[fuzz]
+runs = 256
+
+[invariant]
+runs = 128
+depth = 64
+fail_on_revert = true
 
 [rpc_endpoints]
-default_network = "http://127.0.0.1:8545"
-
-mainnet = "https://eth-mainnet.alchemyapi.io/v2/${ALCHEMY_API_KEY}"
-sepolia = "https://eth-sepolia.g.alchemy.com/v2/${ALCHEMY_API_KEY}"
-arbitrum = "https://arb-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}"
-arbitrumSepolia = "https://arb-sepolia.g.alchemy.com/v2/${ALCHEMY_API_KEY}"
-optimism = "https://opt-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}"
-optimismSepolia = "https://opt-sepolia.g.alchemy.com/v2/${ALCHEMY_API_KEY}"
-polygon = "https://polygon-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}"
-polygonMumbai = "https://polygon-mumbai.g.alchemy.com/v2/${ALCHEMY_API_KEY}"
-polygonZkEvm = "https://zkevm-rpc.com"
-polygonZkEvmTestnet = "https://rpc.public.zkevm-test.net"
-gnosis = "https://rpc.gnosischain.com"
-chiado = "https://rpc.chiadochain.net"
-base = "https://mainnet.base.org"
-baseSepolia = "https://sepolia.base.org"
-scrollSepolia = "https://sepolia-rpc.scroll.io"
-scroll = "https://rpc.scroll.io"
-pgn = "https://rpc.publicgoods.network"
-pgnTestnet = "https://sepolia.publicgoods.network"
-
-
+# --- primary hackathon targets ---
 localhost = "http://127.0.0.1:8545"
+# Public endpoints — free, no key needed, sufficient for hackathon-scale testnet
+# deploys. Foundry does NOT support shell-style `${VAR:-default}` fallbacks, so if
+# you hit rate limits, replace the string with your own provider URL directly.
+sepolia = "https://ethereum-sepolia-rpc.publicnode.com"
+baseSepolia = "https://sepolia.base.org"
+# Resolved purely from env — set PRODUCTION_RPC_URL when the team has picked the
+# real launch chain. Left unset, any `--network production` deploy fails fast
+# instead of silently hitting a placeholder endpoint.
+production = "${PRODUCTION_RPC_URL}"
+
+# --- other low-cost L2 testnets (swap into baseSepolia's slot above, or use directly) ---
+optimismSepolia = "https://sepolia.optimism.io"
+arbitrumSepolia = "https://sepolia-rollup.arbitrum.io/rpc"
+# Celo migrated to an Ethereum L2 and sunset Alfajores in Sep 2025 — Celo Sepolia
+# is the current testnet (chain id 11142220, Blockscout explorer, no Etherscan key).
+celoSepolia = "https://forno.celo-sepolia.celo-testnet.org"
+# publicnode instead of the official polygon.technology host, which did not resolve
+# from every network tested during setup.
+polygonAmoy = "https://polygon-amoy-bor-rpc.publicnode.com"
+
+# --- mainnets (only needed once you're past the hackathon) ---
+mainnet = "https://eth-mainnet.alchemyapi.io/v2/${ALCHEMY_API_KEY}"
+base = "https://mainnet.base.org"
+arbitrum = "https://arb-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}"
+optimism = "https://opt-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}"
+polygon = "https://polygon-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}"
+celo = "https://forno.celo.org"
 
 [etherscan]
-polygonMumbai = { key = "${ETHERSCAN_API_KEY}" }
+# Etherscan's v2 API is multichain on a single key for Etherscan-family explorers.
 sepolia = { key = "${ETHERSCAN_API_KEY}" }
-
-
+optimismSepolia = { key = "${ETHERSCAN_API_KEY}" }
+arbitrumSepolia = { key = "${ETHERSCAN_API_KEY}" }
+mainnet = { key = "${ETHERSCAN_API_KEY}" }
+optimism = { key = "${ETHERSCAN_API_KEY}" }
+arbitrum = { key = "${ETHERSCAN_API_KEY}" }
+# Base and Polygon verify against their own explorer families.
+baseSepolia = { key = "${BASESCAN_API_KEY}" }
+base = { key = "${BASESCAN_API_KEY}" }
+polygonAmoy = { key = "${POLYGONSCAN_API_KEY}" }
+polygon = { key = "${POLYGONSCAN_API_KEY}" }
+# celoSepolia/celo are Blockscout, not Etherscan-family — no [etherscan] entry works
+# for them. Verify with:
+#   forge verify-contract <addr> <Contract> --chain celoSepolia \
+#     --verifier blockscout --verifier-url https://celo-sepolia.blockscout.com/api
 
 [fmt]
 line_length = 120
@@ -45,8 +78,5 @@ tab_width = 4
 quote_style = "double"
 bracket_spacing = true
 int_types = "long"
-
-
-
 
 # See more config options https://book.getfoundry.sh/reference/config/overview

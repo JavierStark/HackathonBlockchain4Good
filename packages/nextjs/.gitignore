@@ -36,3 +36,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 ipfs-upload.config.json
+
+# playwright
+/test-results
+/playwright-report
+/blob-report
+e2e/.anvil-pid
+e2e/.serve-pid
