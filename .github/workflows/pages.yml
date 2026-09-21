@@ -1,0 +1,56 @@
+name: Deploy Frontend (GitHub Pages, optional)
+
+# Manual only. Vercel (deploy-frontend.yml) is the primary path — this exists
+# because the app was confirmed static-export-compatible while building this
+# repo (no API routes, no server actions, no server-only secrets: it's a pure
+# client-side dapp). Use this instead of Vercel only if you specifically want
+# a free GitHub-hosted URL. Do not enable both workflows to auto-deploy on
+# push — pick one, or you'll fight yourself over which URL is "the" deploy.
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: yarn
+
+      - run: corepack enable
+      - run: yarn install --immutable
+
+      - name: Build static export
+        working-directory: packages/nextjs
+        env:
+          NEXT_PUBLIC_IPFS_BUILD: "true"
+        run: yarn build
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: packages/nextjs/out
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

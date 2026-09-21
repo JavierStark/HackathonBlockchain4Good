@@ -1,0 +1,168 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Read-only by default; individual jobs opt into more if they ever need it
+# (none currently do — verification only, no deploys happen from this workflow).
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FOUNDRY_VERSION: v1.8.3
+
+jobs:
+  contracts:
+    name: Contracts (Foundry)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: ${{ env.FOUNDRY_VERSION }}
+
+      - name: Forge fmt --check
+        working-directory: packages/foundry
+        run: forge fmt --check
+
+      - name: Forge build
+        working-directory: packages/foundry
+        run: forge build --sizes
+
+      - name: Forge test (incl. fuzz + invariant suites)
+        working-directory: packages/foundry
+        run: forge test -vvv
+
+      - name: Coverage
+        working-directory: packages/foundry
+        run: forge coverage --report summary --report lcov
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-lcov
+          path: packages/foundry/lcov.info
+          retention-days: 14
+
+  frontend:
+    name: Frontend (Next.js)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: yarn
+
+      - run: corepack enable
+
+      - run: yarn install --immutable
+
+      - name: Lint (zero warnings — see docs/development.md for why this is enforced strictly)
+        run: yarn next:lint --max-warnings=0
+
+      - name: Type check
+        run: yarn next:check-types
+
+      - name: Build
+        run: yarn next:build
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: nextjs-build
+          path: packages/nextjs/.next
+          retention-days: 3
+
+  security:
+    name: Security checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      # Never blocks the merge on its own (see docs/security.md) — findings
+      # surface as an annotated GitHub Actions check, not a hard CI failure,
+      # because false positives on generated/vendored code are common and a
+      # red X nobody can act on just gets ignored over time.
+      - name: Secret scan (gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+
+      - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: ${{ env.FOUNDRY_VERSION }}
+
+      - name: Install Slither
+        run: pip install slither-analyzer==0.10.4
+
+      - name: Slither static analysis
+        working-directory: packages/foundry
+        run: slither . --config-file slither.config.json || true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: yarn
+
+      - run: corepack enable
+      - run: yarn install --immutable
+
+      - name: Dependency audit (informational — see docs/security.md)
+        run: yarn npm audit --severity high || true
+
+  e2e:
+    name: E2E (Playwright smoke suite)
+    runs-on: ubuntu-latest
+    needs: [contracts, frontend]
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: ${{ env.FOUNDRY_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: yarn
+
+      - run: corepack enable
+      - run: yarn install --immutable
+
+      - name: Install Playwright browsers
+        working-directory: packages/nextjs
+        run: npx playwright install --with-deps chromium
+
+      # global-setup.ts owns the whole chain: starts Anvil, deploys, builds
+      # the frontend against that exact deployment, then serves it. See
+      # packages/nextjs/e2e/README.md for why that ordering is load-bearing.
+      - name: Run e2e smoke suite
+        run: yarn e2e
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: packages/nextjs/playwright-report
+          retention-days: 14

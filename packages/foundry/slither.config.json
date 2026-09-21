@@ -1,0 +1,7 @@
+{
+  "filter_paths": "lib/|node_modules/",
+  "exclude_dependencies": true,
+  "exclude_informational": true,
+  "exclude_optimization": true,
+  "foundry_out_directory": "out"
+}

@@ -1,0 +1,123 @@
+name: Deploy Contracts
+
+# Manual only — contracts are never deployed as a side effect of a merge.
+# Choosing "production" requires this workflow to run in the `production`
+# GitHub Environment, which you protect with required reviewers (Settings ->
+# Environments -> production -> Required reviewers). See docs/deployment.md
+# for the one-time repo settings this workflow assumes but cannot configure
+# itself.
+on:
+  workflow_dispatch:
+    inputs:
+      network:
+        description: "Target network (must exist in packages/foundry/foundry.toml [rpc_endpoints])"
+        required: true
+        type: choice
+        options:
+          - sepolia
+          - baseSepolia
+          - optimismSepolia
+          - arbitrumSepolia
+          - celoSepolia
+          - polygonAmoy
+          - production
+        default: baseSepolia
+      deploy_script:
+        description: "Deploy script (relative to packages/foundry/)"
+        required: false
+        type: string
+        default: script/Deploy.s.sol
+
+permissions:
+  contents: read
+
+env:
+  FOUNDRY_VERSION: v1.8.3
+
+jobs:
+  deploy:
+    name: Deploy to ${{ inputs.network }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Maps `network: production` to the `production` GitHub Environment (with
+    # its required-reviewer gate); every other choice runs ungated. Add a
+    # matching `testnet` Environment if you want reviewer gating on testnet too.
+    environment: ${{ inputs.network == 'production' && 'production' || '' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: ${{ env.FOUNDRY_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: yarn
+
+      - run: corepack enable
+      - run: yarn install --immutable
+
+      - name: Pre-flight — compile and test
+        working-directory: packages/foundry
+        run: |
+          forge build
+          forge test
+
+      - name: Pre-flight — show what's about to happen
+        working-directory: packages/foundry
+        env:
+          DEPLOYER_PRIVATE_KEY: ${{ secrets.DEPLOYER_PRIVATE_KEY }}
+        run: |
+          echo "### Deployment plan" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Network: \`${{ inputs.network }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Script: \`${{ inputs.deploy_script }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Commit: \`${{ github.sha }}\`" >> "$GITHUB_STEP_SUMMARY"
+          DEPLOYER_ADDRESS=$(cast wallet address --private-key "$DEPLOYER_PRIVATE_KEY")
+          echo "- Deployer: \`$DEPLOYER_ADDRESS\`" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Deploy (broadcast)
+        working-directory: packages/foundry
+        env:
+          DEPLOYER_PRIVATE_KEY: ${{ secrets.DEPLOYER_PRIVATE_KEY }}
+          ALCHEMY_API_KEY: ${{ secrets.ALCHEMY_API_KEY }}
+          PRODUCTION_RPC_URL: ${{ secrets.PRODUCTION_RPC_URL }}
+        run: |
+          forge script "${{ inputs.deploy_script }}" \
+            --rpc-url "${{ inputs.network }}" \
+            --private-key "$DEPLOYER_PRIVATE_KEY" \
+            --broadcast --ffi
+
+      - name: Generate frontend ABIs + record deployment manifest
+        working-directory: packages/foundry
+        run: |
+          node scripts-js/generateTsAbis.js
+          node ../../scripts/record-deployment.mjs
+
+      - name: Verify contracts
+        working-directory: packages/foundry
+        env:
+          ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
+          BASESCAN_API_KEY: ${{ secrets.BASESCAN_API_KEY }}
+          POLYGONSCAN_API_KEY: ${{ secrets.POLYGONSCAN_API_KEY }}
+        run: forge script script/VerifyAll.s.sol --ffi --rpc-url "${{ inputs.network }}"
+        continue-on-error: true # verification failing shouldn't undo a successful deploy
+
+      - name: Publish deployment manifest as an artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-manifest-${{ inputs.network }}-${{ github.sha }}
+          path: packages/foundry/deployments/
+          retention-days: 90
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Deployed contracts (${{ inputs.network }})" >> "$GITHUB_STEP_SUMMARY"
+          for f in packages/foundry/deployments/*.json; do
+            echo '```json' >> "$GITHUB_STEP_SUMMARY"
+            cat "$f" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          done

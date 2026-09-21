@@ -1,0 +1,4 @@
+# Default owner for everything. Add teammates as your team forms —
+# e.g. `packages/foundry/ @JavierStark @teammate-handle` to require a specific
+# reviewer on contract changes.
+* @JavierStark
