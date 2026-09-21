@@ -1,0 +1,9 @@
+---
+description: Project guidance — read AGENTS.md first
+alwaysApply: true
+---
+
+This repository's agent guidance lives in [AGENTS.md](../../AGENTS.md) at the
+repo root — architecture, golden rules, commands, testing/deployment rules,
+and the skills index. Read it before making changes. This file exists only so
+Cursor picks that guidance up automatically; nothing here duplicates it.

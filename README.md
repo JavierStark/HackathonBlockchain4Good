@@ -1,83 +1,135 @@
-# 🏗 Scaffold-ETH 2
+# EVM Hackathon Factory
 
-<h4 align="center">
-  <a href="https://docs.scaffoldeth.io">Documentation</a> |
-  <a href="https://scaffoldeth.io">Website</a>
-</h4>
-
-🧪 An open-source, up-to-date toolkit for building decentralized applications (dapps) on the Ethereum blockchain. It's designed to make it easier for developers to create and deploy smart contracts and build user interfaces that interact with those contracts.
+An agent-native, production-capable environment for building an EVM/Web3
+social-good dapp fast: **idea → prototype → testnet → demo → production**.
+Built on [Scaffold-ETH 2](https://scaffoldeth.io) (Foundry flavor) + Next.js,
+with the deploy pipeline, testing, CI/CD, and agent instructions already wired
+together.
 
 > [!NOTE]
-> 🤖 Scaffold-ETH 2 is AI-ready! It has everything agents need to build on Ethereum. Check `.agents/`, `.claude/`, `.opencode` or `.cursor/` for more info.
+> 🤖 This repo is AI-agent-ready. Start with [`AGENTS.md`](AGENTS.md) — it's
+> the canonical guide for architecture, golden rules, commands, and the
+> [`.claude/skills/`](.claude/skills/) index (contract dev, security review,
+> frontend web3, testing, deployment, CI, hackathon execution).
 
-⚙️ Built using NextJS, RainbowKit, Foundry, Wagmi, Viem, and Typescript.
+## What is this?
 
-- ✅ **Contract Hot Reload**: Your frontend auto-adapts to your smart contract as you edit it.
-- 🪝 **[Custom hooks](https://docs.scaffoldeth.io/hooks/)**: Collection of React hooks wrapper around [wagmi](https://wagmi.sh/) to simplify interactions with smart contracts with typescript autocompletion.
-- 🧱 [**Components**](https://docs.scaffoldeth.io/components/): Collection of common web3 components to quickly build your frontend.
-- 🔥 **Burner Wallet & Local Faucet**: Quickly test your application with a burner wallet and local faucet.
-- 🔐 **Integration with Wallet Providers**: Connect to different wallet providers and interact with the Ethereum network.
+A working full-stack dapp skeleton, not just dependencies:
 
-![Debug Contracts tab](https://github.com/scaffold-eth/scaffold-eth-2/assets/55535804/b237af0c-5027-4849-a5c1-2e31495cccb1)
+- **`packages/foundry`** — Solidity contracts (Foundry), tests (unit + fuzz +
+  invariant), deploy scripts, account/keystore management
+- **`packages/nextjs`** — Next.js frontend (RainbowKit, Wagmi, Viem, Tailwind
+  + DaisyUI), wired to read whatever's deployed via auto-generated ABIs
+- **`scripts/`** — one-command dev (`dev:all`), deployment manifests, demo
+  data seeding
+- **`.github/workflows/`** — CI (contracts + frontend + security + e2e),
+  manual-dispatch contract deploys (testnet/production, gated), frontend
+  deploy (Vercel + optional GitHub Pages)
+- **`.claude/skills/`**, **`AGENTS.md`** — so a coding agent (or a new
+  teammate) can pick this up and start building the actual product
+  immediately, without rediscovering the architecture
 
-## Requirements
+The shipped contract (`YourContract.sol`) is a stock example — the point is
+proving deploy → ABI generation → frontend read → e2e test all work together
+out of the box. Replace it with your real idea; see
+[`.claude/skills/dapp-product-development/SKILL.md`](.claude/skills/dapp-product-development/SKILL.md).
 
-Before you begin, you need to install the following tools:
-
-- [Node (>= v20.18.3)](https://nodejs.org/en/download/)
-- Yarn ([v1](https://classic.yarnpkg.com/en/docs/install/) or [v2+](https://yarnpkg.com/getting-started/install))
-- [Git](https://git-scm.com/downloads)
-
-## Quickstart
-
-To get started with Scaffold-ETH 2, follow the steps below:
-
-1. Install dependencies if it was skipped in CLI:
-
+```mermaid
+flowchart LR
+    subgraph Local["Local dev"]
+        Anvil[Anvil local chain]
+        Foundry[Foundry contracts + tests]
+        Foundry -->|yarn deploy| Anvil
+        Foundry -->|generates| ABIs[deployedContracts.ts]
+    end
+    ABIs --> Next[Next.js frontend]
+    Next -->|RainbowKit / Wagmi / Viem| Wallet[User wallet]
+    subgraph CI["GitHub Actions"]
+        CIcheck[ci.yml: contracts + frontend + security + e2e]
+        DeployC[deploy-contracts.yml: manual, gated]
+        DeployF[deploy-frontend.yml: Vercel]
+    end
+    Foundry -.push/PR.-> CIcheck
+    Foundry -.workflow_dispatch.-> DeployC
+    DeployC --> Testnet[(Base Sepolia / Sepolia)]
+    Next -.push/PR.-> DeployF
+    DeployF --> Vercel[Vercel]
 ```
-cd my-dapp-example
+
+## Install
+
+Requirements: Node ≥ 20.18.3, [Foundry](https://getfoundry.sh) ≥ 1.4.0, Git.
+See [`docs/development.md`](docs/development.md) for exact versions this repo
+was built and tested against, and Windows-specific setup notes.
+
+```bash
+corepack enable   # activates the pinned yarn 4 from package.json
 yarn install
+yarn doctor       # verifies your toolchain before you go any further
 ```
 
-2. Run a local network in the first terminal:
+## Run
 
-```
-yarn chain
-```
-
-This command starts a local Ethereum network using Foundry. The network runs on your local machine and can be used for testing and development. You can customize the network configuration in `packages/foundry/foundry.toml`.
-
-3. On a second terminal, deploy the test contract:
-
-```
-yarn deploy
+```bash
+yarn dev:all
 ```
 
-This command deploys a test smart contract to the local network. The contract is located in `packages/foundry/contracts` and can be modified to suit your needs. The `yarn deploy` command uses the deploy script located in `packages/foundry/script` to deploy the contract to the network. You can also customize the deploy script.
+One command: starts Anvil, deploys the contracts, starts the frontend at
+`http://localhost:3000`. Ctrl-C stops everything. (Or run `yarn chain`,
+`yarn deploy`, `yarn start` in three terminals if you want them separate.)
 
-4. On a third terminal, start your NextJS app:
+## Test
 
+```bash
+yarn check       # fast: format/lint check, typecheck, address drift
+yarn test:all    # full: forge test (incl. fuzz + invariant), next build, e2e
 ```
-yarn start
+
+See [`.claude/skills/testing/SKILL.md`](.claude/skills/testing/SKILL.md) for
+the testing conventions this repo follows.
+
+## Deploy contracts
+
+```bash
+yarn deploy --network baseSepolia
+yarn workspace @se-2/foundry verify RPC_URL=baseSepolia
 ```
 
-Visit your app on: `http://localhost:3000`. You can interact with your smart contract using the `Debug Contracts` page. You can tweak the app config in `packages/nextjs/scaffold.config.ts`.
+Or trigger `.github/workflows/deploy-contracts.yml` (manual dispatch) for a
+consistent, logged deployment with an auto-generated manifest. Full walkthrough,
+required secrets, and the production-deploy approval gate:
+[`docs/deployment.md`](docs/deployment.md).
 
-Run smart contract test with `yarn foundry:test`
+## Deploy frontend
 
-- Edit your smart contracts in `packages/foundry/contracts`
-- Edit your frontend homepage at `packages/nextjs/app/page.tsx`. For guidance on [routing](https://nextjs.org/docs/app/building-your-application/routing/defining-routes) and configuring [pages/layouts](https://nextjs.org/docs/app/building-your-application/routing/pages-and-layouts) checkout the Next.js documentation.
-- Edit your deployment scripts in `packages/foundry/script`
+Connect the repo at [vercel.com/new](https://vercel.com/new) (simplest), or
+use `.github/workflows/deploy-frontend.yml` if you want deploys gated behind
+CI. A GitHub Pages fallback (`.github/workflows/pages.yml`, manual dispatch)
+is also available — this app is a pure client-side dapp, confirmed
+static-export-compatible. Details: [`docs/deployment.md`](docs/deployment.md).
 
+## Where things are
 
-## Documentation
+| | |
+|---|---|
+| Contracts | `packages/foundry/contracts/` |
+| Contract tests | `packages/foundry/test/` |
+| Deploy scripts | `packages/foundry/script/` |
+| Frontend | `packages/nextjs/app/` |
+| Frontend e2e tests | `packages/nextjs/e2e/` |
+| Supported networks | `packages/foundry/foundry.toml` (`[rpc_endpoints]`), `packages/nextjs/scaffold.config.ts` (`targetNetworks`) — localhost, Ethereum Sepolia, Base Sepolia by default; Optimism/Arbitrum Sepolia, Celo Sepolia, Polygon Amoy also configured |
+| Deployed addresses | `packages/foundry/deployments/<chainId>.json` (auto-generated, never hand-edited — see `scripts/record-deployment.mjs`) |
 
-Visit our [docs](https://docs.scaffoldeth.io) to learn how to start building with Scaffold-ETH 2.
+## Contributing
 
-To know more about its features, check out our [website](https://scaffoldeth.io).
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the git workflow, commit
+convention, and pre-PR checklist for *this* repo.
 
-## Contributing to Scaffold-ETH 2
+## More docs
 
-We welcome contributions to Scaffold-ETH 2!
-
-Please see [CONTRIBUTING.MD](https://github.com/scaffold-eth/scaffold-eth-2/blob/main/CONTRIBUTING.md) for more information and guidelines for contributing to Scaffold-ETH 2.
+- [`docs/architecture.md`](docs/architecture.md) — how the pieces fit together
+- [`docs/development.md`](docs/development.md) — exact tool versions, Windows notes, local dev details
+- [`docs/deployment.md`](docs/deployment.md) — full deploy walkthrough (local → testnet → production)
+- [`docs/security.md`](docs/security.md) — this repo's security posture and CI security checks
+- [`docs/hackathon.md`](docs/hackathon.md) — 5-minute setup, demo workflow, submission checklist
+- [`docs/on-chain-vs-off-chain.md`](docs/on-chain-vs-off-chain.md) — how to classify feature data
