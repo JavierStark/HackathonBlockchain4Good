@@ -1,12 +1,29 @@
 .PHONY: build deploy generate-abis record-deployment get-address account chain compile flatten fork format lint test verify
 
-# Windows: GNU Make has no POSIX `sh` on PATH by default and silently falls back to
-# cmd.exe, which cannot run the `~`, `[ ]`, `if/fi` recipes below. Force Git for
-# Windows' bundled sh.exe. Override with `make SHELL=/path/to/sh ...` if Git is
-# installed somewhere else.
+# Windows: GNU Make has no POSIX `sh` on PATH by default and silently falls back
+# to cmd.exe, which cannot run the `~`, `[ ]`, `if/fi` syntax that
+# setup-anvil-wallet and deploy (below) use. Pin ONLY those two targets to Git
+# for Windows' sh.exe, via GNU Make's target-specific variables — not a global
+# SHELL override.
+#
+# A global override was tried first and reverted: it also routed every OTHER
+# recipe (account, compile, test, ...) through Git Bash's MSYS2 pty layer,
+# which silently breaks native Win32 console interaction for anything reading
+# an interactive password. Confirmed the hard way: `yarn account` would
+# accept the exact correct keystore password and still report "incorrect
+# password" — MSYS2's pty doesn't relay a native console app's raw-mode
+# password read correctly, even though the recipe itself (`node
+# scripts-js/checkAccountBalance.js`) has no POSIX-specific syntax at all and
+# never needed a POSIX shell in the first place. Plain cmd.exe (Make's
+# Windows default) preserves a real console handle for every other target.
+#
+# Override with `make setup-anvil-wallet SHELL=/path/to/sh ...` (or edit the
+# lines below directly) if Git for Windows is installed somewhere else.
 ifeq ($(OS),Windows_NT)
-SHELL := C:/Program Files/Git/usr/bin/sh.exe
-.SHELLFLAGS := -c
+setup-anvil-wallet: SHELL := C:/Program Files/Git/usr/bin/sh.exe
+setup-anvil-wallet: .SHELLFLAGS := -c
+deploy: SHELL := C:/Program Files/Git/usr/bin/sh.exe
+deploy: .SHELLFLAGS := -c
 endif
 
 DEPLOY_SCRIPT ?= script/Deploy.s.sol
