@@ -36,7 +36,7 @@ contract using `.claude/skills/dapp-product-development/SKILL.md`.
   GitHub Pages (`.github/workflows/pages.yml`, optional/manual — the app is a
   pure client-side dapp, confirmed static-export-compatible) for the frontend
 
-This project runs on **Windows** as well as macOS/Linux. Three Windows-specific
+This project runs on **Windows** as well as macOS/Linux. Four platform-specific
 fixes are load-bearing — do not revert them without understanding why (see
 `docs/development.md#windows-notes` for the full explanation of each):
 
@@ -53,6 +53,14 @@ fixes are load-bearing — do not revert them without understanding why (see
    parameter (`$1`) on Windows, so the old `${1:-default}` pattern silently
    ignored it and always fell back to localhost. Defaults now live in the
    Makefile itself (`RPC_URL ?= localhost`, `FORK_URL ?= mainnet`).
+4. `packages/foundry/scripts-js/{checkAccountBalance,revealPK}.js` (`yarn account`,
+   `yarn account:reveal-pk`) call cast commands that need an interactive
+   keystore password via `execSync(cmd, { stdio: ["inherit", "pipe", "inherit"] })`,
+   not plain `execSync(cmd)`. `execSync`'s default pipes stdin too, and a
+   piped stdin isn't read as buffered input by cast's password prompt at
+   all — confirmed it just hangs. Symptom before the fix: the password
+   prompt appears, typing + Enter does nothing visible, a second Enter
+   surfaces "incorrect password" even with the right one.
 
 ## Golden Rules
 

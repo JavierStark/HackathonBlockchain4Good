@@ -32,7 +32,7 @@ before they turn into a confusing downstream error.
 ## Windows notes
 
 This repo runs natively on Windows (no WSL required) — Foundry ships native
-`win32_amd64` binaries. Three fixes were required and are load-bearing; also
+`win32_amd64` binaries. Four fixes were required and are load-bearing; also
 summarized in `AGENTS.md`:
 
 1. **`packages/foundry/Makefile`'s `SHELL` override.** GNU Make on Windows has
@@ -60,11 +60,26 @@ summarized in `AGENTS.md`:
    separately), so `yarn workspace @se-2/foundry verify RPC_URL=baseSepolia`
    works identically on every OS — it becomes `make verify RPC_URL=baseSepolia`,
    a plain Make command-line variable override, not a shell trick.
+4. **Interactive password prompts need inherited stdin, not `execSync`'s
+   default.** `yarn account` (`checkAccountBalance.js`) and
+   `yarn account:reveal-pk` (`revealPK.js`) both called a password-protected
+   `cast` command via plain `execSync(cmd)`. Node's `execSync` pipes stdin by
+   default (not inherited from the parent terminal); confirmed a piped stdin
+   just hangs rather than being read as buffered input by cast's password
+   prompt at all. Symptom: the prompt appears, typing the password and
+   pressing Enter visibly does nothing, a second Enter surfaces "incorrect
+   password" — even with the right one. Fix:
+   `execSync(cmd, { stdio: ["inherit", "pipe", "inherit"] })` — inherit
+   stdin/stderr so the real prompt works, pipe only stdout to still capture
+   the result. Not confirmed Windows-only (the same `execSync` default
+   applies on macOS/Linux too), but that's where it was actually hit and
+   fixed.
 
-If you hit a new Windows-specific issue, the pattern that found these three
+If you hit a new platform-specific issue, the pattern that found these four
 was: run the exact command, don't assume; when something "should" work per
 the docs but doesn't, test the specific mechanism in isolation (a throwaway
-Makefile target, a `console.log` of the resolved value) before trusting it.
+Makefile target, a `console.log` of the resolved value, a minimal
+`spawnSync`/`execSync` repro) before trusting it.
 
 ## Why no frontend unit test framework by default
 
