@@ -24,14 +24,36 @@ async function createKeystore() {
       process.exit(1);
     }
 
-    const privateKey = newWalletResult.stdout
+    // `cast wallet new` (confirmed on Foundry 1.8.3) writes its human-readable
+    // summary — the "Private key:"-labeled line this used to parse — to
+    // STDERR, and only a machine-readable `address\tprivateKey` line to
+    // stdout. Parse that tab-separated stdout line first (more robust: no
+    // label text to drift out of sync with cast's own wording), and fall
+    // back to scanning both streams for the "Private key:" label in case an
+    // older/newer cast version formats this differently.
+    let privateKey = newWalletResult.stdout
       .split("\n")
-      .find((line) => line.includes("Private key:"))
-      ?.split(":")[1]
-      ?.trim();
+      .map((line) => line.trim())
+      .map((line) => line.split("\t"))
+      .find((parts) => parts.length === 2 && parts[1].startsWith("0x"))?.[1];
 
     if (!privateKey) {
-      console.error("\n❌ Could not extract private key from output");
+      const combinedOutput = `${newWalletResult.stdout}\n${
+        newWalletResult.stderr ?? ""
+      }`;
+      privateKey = combinedOutput
+        .split("\n")
+        .find((line) => line.includes("Private key:"))
+        ?.split(":")[1]
+        ?.trim();
+    }
+
+    if (!privateKey) {
+      console.error(
+        "\n❌ Could not extract private key from `cast wallet new` output"
+      );
+      console.error("stdout:", newWalletResult.stdout);
+      console.error("stderr:", newWalletResult.stderr);
       process.exit(1);
     }
 
