@@ -78,7 +78,16 @@ async function checkAccountBalance() {
 
     let address;
     try {
-      address = execSync(addressCommand).toString().trim();
+      // execSync's default stdio pipes stdin too — cast's password prompt
+      // needs a real, inherited stdin to read from (confirmed: a piped
+      // stdin just hangs, it isn't read as buffered input at all). Inherit
+      // stdin/stderr for the interactive prompt, pipe only stdout so we can
+      // still capture the returned address.
+      address = execSync(addressCommand, {
+        stdio: ["inherit", "pipe", "inherit"],
+      })
+        .toString()
+        .trim();
       console.log("\n💰 Checking balances across networks...");
       console.log("\n");
       await getBalanceForEachNetwork(address);

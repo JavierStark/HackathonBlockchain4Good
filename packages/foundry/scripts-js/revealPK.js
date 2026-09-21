@@ -17,7 +17,16 @@ async function revealPk() {
     try {
       const revealPKCommand = `cast wallet decrypt-keystore ${selectedKeystore}`;
 
-      const revealPKResult = execSync(revealPKCommand).toString().trim();
+      // execSync's default stdio pipes stdin too — cast's password prompt
+      // needs a real, inherited stdin to read from (confirmed: a piped
+      // stdin just hangs, it isn't read as buffered input at all). Inherit
+      // stdin/stderr for the interactive prompt, pipe only stdout so we can
+      // still capture the revealed key.
+      const revealPKResult = execSync(revealPKCommand, {
+        stdio: ["inherit", "pipe", "inherit"],
+      })
+        .toString()
+        .trim();
 
       console.log(`\n🔑 ${revealPKResult}`);
     } catch (error) {
