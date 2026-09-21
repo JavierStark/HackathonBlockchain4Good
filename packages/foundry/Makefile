@@ -1,29 +1,27 @@
 .PHONY: build deploy generate-abis record-deployment get-address account chain compile flatten fork format lint test verify
 
 # Windows: GNU Make has no POSIX `sh` on PATH by default and silently falls back
-# to cmd.exe, which cannot run the `~`, `[ ]`, `if/fi` syntax that
-# setup-anvil-wallet and deploy (below) use. Pin ONLY those two targets to Git
-# for Windows' sh.exe, via GNU Make's target-specific variables — not a global
-# SHELL override.
+# to cmd.exe, which cannot run the `~` expansion that setup-anvil-wallet
+# (below) uses. Pin ONLY that target to Git for Windows' sh.exe, via GNU
+# Make's target-specific variables — not a global SHELL override.
 #
 # A global override was tried first and reverted: it also routed every OTHER
-# recipe (account, compile, test, ...) through Git Bash's MSYS2 pty layer,
-# which silently breaks native Win32 console interaction for anything reading
-# an interactive password. Confirmed the hard way: `yarn account` would
-# accept the exact correct keystore password and still report "incorrect
-# password" — MSYS2's pty doesn't relay a native console app's raw-mode
-# password read correctly, even though the recipe itself (`node
-# scripts-js/checkAccountBalance.js`) has no POSIX-specific syntax at all and
-# never needed a POSIX shell in the first place. Plain cmd.exe (Make's
-# Windows default) preserves a real console handle for every other target.
+# recipe (account, deploy, compile, test, ...) through Git Bash's MSYS2 pty
+# layer, which silently breaks native Win32 console interaction for anything
+# reading an interactive password. Confirmed the hard way, twice: `yarn
+# account` and `forge script` (deploy, when it needs a keystore password —
+# see DEPLOY_CMD below) would both accept the exact correct password and
+# still fail to decrypt — MSYS2's pty doesn't relay a native console app's
+# raw-mode password read correctly. `deploy`'s own if/fi conditionals were
+# rewritten below as Make-native `ifeq` directives specifically so that
+# target no longer needs a POSIX shell at all, and can run under Make's real
+# Windows default (cmd.exe), which preserves a genuine console handle.
 #
 # Override with `make setup-anvil-wallet SHELL=/path/to/sh ...` (or edit the
 # lines below directly) if Git for Windows is installed somewhere else.
 ifeq ($(OS),Windows_NT)
 setup-anvil-wallet: SHELL := C:/Program Files/Git/usr/bin/sh.exe
 setup-anvil-wallet: .SHELLFLAGS := -c
-deploy: SHELL := C:/Program Files/Git/usr/bin/sh.exe
-deploy: .SHELLFLAGS := -c
 endif
 
 DEPLOY_SCRIPT ?= script/Deploy.s.sol
@@ -36,6 +34,23 @@ DEPLOY_SCRIPT ?= script/Deploy.s.sol
 # Windows and always falls back to the default — confirmed during setup.
 RPC_URL ?= localhost
 FORK_URL ?= mainnet
+
+# Which forge invocation `deploy` runs, chosen entirely by Make itself
+# (ifeq, evaluated when the Makefile is read) rather than a shell if/fi —
+# see the note above for why this matters on Windows. Only the
+# scaffold-eth-default + localhost combination skips the password prompt
+# (via --password, a hardcoded non-secret value — see setup-anvil-wallet);
+# every other combination lets forge prompt interactively, exactly like
+# `yarn account` does, and needs the same real-console access.
+ifeq ($(RPC_URL),localhost)
+ifeq ($(ETH_KEYSTORE_ACCOUNT),scaffold-eth-default)
+DEPLOY_CMD = forge script $(DEPLOY_SCRIPT) --rpc-url localhost --password localhost --broadcast --ffi
+else
+DEPLOY_CMD = forge script $(DEPLOY_SCRIPT) --rpc-url localhost --broadcast --ffi
+endif
+else
+DEPLOY_CMD = forge script $(DEPLOY_SCRIPT) --rpc-url $(RPC_URL) --broadcast --ffi
+endif
 
 # setup wallet for anvil
 setup-anvil-wallet:
@@ -50,10 +65,12 @@ chain: setup-anvil-wallet
 fork: setup-anvil-wallet
 	anvil --fork-url $(FORK_URL) --chain-id 31337
 
-# Deploy the contracts
+# Deploy the contracts. Existence check + branch selection both happen via
+# Make functions (wildcard/error/ifeq above), not shell syntax — see the
+# SHELL note above for why deploy deliberately has no POSIX-only syntax left.
 deploy:
-	@if [ ! -f "$(DEPLOY_SCRIPT)" ]; then 		echo "Error: Deploy script '$(DEPLOY_SCRIPT)' not found"; 		exit 1; 	fi
-	@if [ "$(RPC_URL)" = "localhost" ]; then 		if [ "$(ETH_KEYSTORE_ACCOUNT)" = "scaffold-eth-default" ]; then 			forge script $(DEPLOY_SCRIPT) --rpc-url localhost --password localhost --broadcast --ffi; 		else 			forge script $(DEPLOY_SCRIPT) --rpc-url localhost --broadcast --ffi; 		fi 	else 		forge script $(DEPLOY_SCRIPT) --rpc-url $(RPC_URL) --broadcast --ffi; 	fi
+	$(if $(wildcard $(DEPLOY_SCRIPT)),,$(error Deploy script '$(DEPLOY_SCRIPT)' not found))
+	$(DEPLOY_CMD)
 
 # Deploy and generate ABIs
 deploy-and-generate-abis: deploy generate-abis record-deployment
