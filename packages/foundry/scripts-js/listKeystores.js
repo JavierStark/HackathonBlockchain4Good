@@ -1,5 +1,6 @@
 import { readdirSync } from "fs";
 import { join } from "path";
+import { homedir } from "os";
 import readline from "readline";
 import { fileURLToPath } from "url";
 
@@ -11,7 +12,7 @@ async function listKeystores(
     output: process.stdout,
   });
 
-  const keystorePath = join(process.env.HOME, ".foundry", "keystores");
+  const keystorePath = join(homedir(), ".foundry", "keystores");
 
   try {
     const keystores = readdirSync(keystorePath).filter(

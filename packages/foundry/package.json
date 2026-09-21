@@ -10,14 +10,15 @@
     "chain": "make chain",
     "clean": "forge clean",
     "compile": "make compile",
+    "coverage": "forge coverage --report summary --report lcov",
     "deploy": "node scripts-js/parseArgs.js",
     "flatten": "make flatten",
-    "fork": "make fork FORK_URL=${1:-mainnet}",
+    "fork": "make fork",
     "format": "make format",
     "postinstall": "shx cp -n .env.example .env",
     "lint": "make lint",
     "test": "forge test",
-    "verify": "make verify RPC_URL=${1:-localhost}"
+    "verify": "make verify"
   },
   "dependencies": {
     "dotenv": "~16.3.1",

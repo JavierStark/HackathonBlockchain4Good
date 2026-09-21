@@ -1,0 +1,16 @@
+# Normalize line endings to LF in the repository regardless of the checkout OS.
+# Windows contributors keep CRLF in their working tree (core.autocrlf=true is the
+# Git for Windows default); this only controls what's stored in git and what CI
+# (always Linux) sees. Prevents `forge fmt --check` / prettier / eslint from
+# flagging line-ending-only diffs that differ by platform.
+* text=auto eol=lf
+
+# Never let git try to diff/merge binaries as text.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.zip binary

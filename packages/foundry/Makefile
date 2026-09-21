@@ -1,6 +1,24 @@
-.PHONY: build deploy generate-abis get-address account chain compile flatten fork format lint test verify
+.PHONY: build deploy generate-abis record-deployment get-address account chain compile flatten fork format lint test verify
+
+# Windows: GNU Make has no POSIX `sh` on PATH by default and silently falls back to
+# cmd.exe, which cannot run the `~`, `[ ]`, `if/fi` recipes below. Force Git for
+# Windows' bundled sh.exe. Override with `make SHELL=/path/to/sh ...` if Git is
+# installed somewhere else.
+ifeq ($(OS),Windows_NT)
+SHELL := C:/Program Files/Git/usr/bin/sh.exe
+.SHELLFLAGS := -c
+endif
 
 DEPLOY_SCRIPT ?= script/Deploy.s.sol
+# Defaults live HERE, not in package.json script strings. `yarn workspace
+# @se-2/foundry verify RPC_URL=sepolia` works identically on every OS because
+# yarn just appends "RPC_URL=sepolia" literally after "make verify" — a plain
+# Make command-line override. The package.json convention this used to use
+# (`make verify RPC_URL=${1:-localhost}`, relying on yarn forwarding an extra
+# CLI arg as shell positional parameter $1) silently ignores the argument on
+# Windows and always falls back to the default — confirmed during setup.
+RPC_URL ?= localhost
+FORK_URL ?= mainnet
 
 # setup wallet for anvil
 setup-anvil-wallet:
@@ -13,7 +31,7 @@ chain: setup-anvil-wallet
 
 # Start a fork
 fork: setup-anvil-wallet
-	anvil --fork-url ${FORK_URL} --chain-id 31337
+	anvil --fork-url $(FORK_URL) --chain-id 31337
 
 # Deploy the contracts
 deploy:
@@ -21,11 +39,15 @@ deploy:
 	@if [ "$(RPC_URL)" = "localhost" ]; then 		if [ "$(ETH_KEYSTORE_ACCOUNT)" = "scaffold-eth-default" ]; then 			forge script $(DEPLOY_SCRIPT) --rpc-url localhost --password localhost --broadcast --ffi; 		else 			forge script $(DEPLOY_SCRIPT) --rpc-url localhost --broadcast --ffi; 		fi 	else 		forge script $(DEPLOY_SCRIPT) --rpc-url $(RPC_URL) --broadcast --ffi; 	fi
 
 # Deploy and generate ABIs
-deploy-and-generate-abis: deploy generate-abis 
+deploy-and-generate-abis: deploy generate-abis record-deployment
 
 # Generate TypeScript ABIs
 generate-abis:
 	node scripts-js/generateTsAbis.js
+
+# Enrich deployments/<chainId>.json with tx hash, block, deployer, commit SHA
+record-deployment:
+	node ../../scripts/record-deployment.mjs
 
 # List account
 account:

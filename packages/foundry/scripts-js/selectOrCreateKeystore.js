@@ -1,5 +1,6 @@
 import { readdirSync, existsSync } from "fs";
 import { join } from "path";
+import { homedir } from "os";
 import { spawnSync, spawn } from "child_process";
 import readline from "readline";
 import { fileURLToPath } from "url";
@@ -11,14 +12,14 @@ async function selectOrCreateKeystore() {
     output: process.stdout,
   });
 
-  const keystorePath = join(process.env.HOME, ".foundry", "keystores");
+  const keystorePath = join(homedir(), ".foundry", "keystores");
 
   try {
     const keystores = existsSync(keystorePath)
-    ? readdirSync(keystorePath).filter(
-        (keystore) => keystore !== "scaffold-eth-default"
-      )
-    : [];
+      ? readdirSync(keystorePath).filter(
+          (keystore) => keystore !== "scaffold-eth-default"
+        )
+      : [];
 
     if (keystores.length === 0) {
       console.log(

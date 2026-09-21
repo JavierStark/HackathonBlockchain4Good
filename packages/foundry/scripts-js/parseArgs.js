@@ -2,6 +2,7 @@ import { spawnSync } from "child_process";
 import { config } from "dotenv";
 import { join, dirname } from "path";
 import { readFileSync, existsSync } from "fs";
+import { homedir } from "os";
 import { parse } from "toml";
 import { fileURLToPath } from "url";
 import { selectOrCreateKeystore } from "./selectOrCreateKeystore.js";
@@ -53,12 +54,7 @@ function validateKeystore(keystoreName) {
     return true; // Default keystore is always valid
   }
 
-  const keystorePath = join(
-    process.env.HOME,
-    ".foundry",
-    "keystores",
-    keystoreName
-  );
+  const keystorePath = join(homedir(), ".foundry", "keystores", keystoreName);
   return existsSync(keystorePath);
 }
 
