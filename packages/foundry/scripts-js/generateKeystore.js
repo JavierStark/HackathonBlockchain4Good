@@ -2,6 +2,21 @@ import { spawnSync, spawn } from "child_process";
 import readline from "readline";
 import { fileURLToPath } from "url";
 
+// --name <name> --password <pw>: fully non-interactive, for scripted/CI use
+// against a test-only wallet — skips both the keystore-name and
+// password/confirm prompts. Never use --password with a real credential:
+// it's visible in shell history and process lists. With no flags, behavior
+// is exactly as before (fully interactive).
+function parseNonInteractiveArgs() {
+  const args = process.argv.slice(2);
+  const nameIdx = args.indexOf("--name");
+  const passwordIdx = args.indexOf("--password");
+  return {
+    name: nameIdx !== -1 ? args[nameIdx + 1] : null,
+    password: passwordIdx !== -1 ? args[passwordIdx + 1] : null,
+  };
+}
+
 async function createKeystore() {
   // Create readline interface
   const rl = readline.createInterface({
@@ -57,21 +72,33 @@ async function createKeystore() {
       process.exit(1);
     }
 
-    const keystoreName = await new Promise((resolve) => {
-      rl.question("\nEnter name for new keystore: ", resolve);
-    });
+    const { name: nameArg, password: passwordArg } = parseNonInteractiveArgs();
+
+    const keystoreName =
+      nameArg ||
+      (await new Promise((resolve) => {
+        rl.question("\nEnter name for new keystore: ", resolve);
+      }));
 
     // Close readline before spawning process with inherited stdio
     rl.close();
 
+    const importArgs = passwordArg
+      ? [
+          "wallet",
+          "import",
+          keystoreName,
+          "--private-key",
+          privateKey,
+          "--unsafe-password",
+          passwordArg,
+        ]
+      : ["wallet", "import", keystoreName, "--private-key", privateKey];
+
     return new Promise((resolve, reject) => {
-      const importProcess = spawn(
-        "cast",
-        ["wallet", "import", keystoreName, "--private-key", privateKey],
-        {
-          stdio: "inherit",
-        }
-      );
+      const importProcess = spawn("cast", importArgs, {
+        stdio: "inherit",
+      });
 
       importProcess.on("close", (code) => {
         if (code === 0) {

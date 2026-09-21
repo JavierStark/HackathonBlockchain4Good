@@ -23,13 +23,42 @@ function prompt(question) {
   });
 }
 
+// --private-key <pk> --password <pw>: fully non-interactive import, for
+// scripted/CI use against a test-only wallet — skips the "Enter private
+// key:" prompt entirely. Never use this with a real credential: both values
+// are visible in shell history and process lists. Positional account name
+// still works the same either way (`yarn account:import <name>`). With no
+// flags, behavior is exactly as before (fully interactive).
+function parseNonInteractiveArgs() {
+  const args = process.argv.slice(2);
+  const pkIdx = args.indexOf("--private-key");
+  const passwordIdx = args.indexOf("--password");
+  const accountName = args.find(
+    (a, i) =>
+      !a.startsWith("--") &&
+      args[i - 1] !== "--private-key" &&
+      args[i - 1] !== "--password"
+  );
+  return {
+    accountName,
+    privateKey: pkIdx !== -1 ? args[pkIdx + 1] : null,
+    password: passwordIdx !== -1 ? args[passwordIdx + 1] : null,
+  };
+}
+
 /**
  * Main function to import an account
  */
 async function importAccount() {
   try {
+    const {
+      accountName: accountNameArg,
+      privateKey,
+      password,
+    } = parseNonInteractiveArgs();
+
     // Get account name from command line args or prompt user
-    let accountName = process.argv[2];
+    let accountName = accountNameArg;
     if (!accountName) {
       accountName = await prompt("\nEnter account name (e.g., my-keystore): ");
 
@@ -47,15 +76,30 @@ async function importAccount() {
       process.exit(1);
     }
 
-    const importProcess = spawn(
-      "cast",
-      ["wallet", "import", accountName, "--interactive"],
-      {
-        stdio: "inherit",
-        shell: true,
-        cwd: process.cwd(),
-      }
-    );
+    // No `shell: true` — cast is a real .exe on PATH, not a shim that needs
+    // one (unlike yarn). An earlier version wrapped this in an unnecessary
+    // extra cmd.exe layer, which is very likely what corrupted cast's own
+    // interactive private-key read ("Enter private key:" immediately
+    // followed by "Error: invalid string length", confirmed reproducible).
+    // generateKeystore.js's working `cast wallet import` call never used
+    // shell:true either — matching that proven-working pattern here.
+    const importArgs =
+      privateKey && password
+        ? [
+            "wallet",
+            "import",
+            accountName,
+            "--private-key",
+            privateKey,
+            "--unsafe-password",
+            password,
+          ]
+        : ["wallet", "import", accountName, "--interactive"];
+
+    const importProcess = spawn("cast", importArgs, {
+      stdio: "inherit",
+      cwd: process.cwd(),
+    });
 
     // Handle process completion
     importProcess.on("close", (code) => {
