@@ -62,7 +62,8 @@
     "verify:testnet": "yarn workspace @se-2/foundry verify RPC_URL=baseSepolia"
   },
   "resolutions": {
-    "@coinbase/cdp-sdk": "1.52.0"
+    "@coinbase/cdp-sdk": "1.52.0",
+    "qr": "0.5.5"
   },
   "devDependencies": {
     "husky": "~9.1.6",

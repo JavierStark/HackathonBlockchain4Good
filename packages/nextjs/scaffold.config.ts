@@ -39,10 +39,17 @@ const scaffoldConfig = {
   // .env.local for local testing, and in the Vercel/system env config for live apps.
   walletConnectProjectId: process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID || "3a8170812b534d0ff9d794f19a901d64",
   // Configure Burner Wallet visibility:
-  // - "localNetworksOnly": only show when all target networks are local (hardhat/anvil)
+  // - "localNetworksOnly": only show when ALL target networks are local (hardhat/anvil)
   // - "allNetworks": show on any configured target networks
   // - "disabled": completely disable
-  burnerWalletMode: "localNetworksOnly",
+  //
+  // "allNetworks" rather than the stock "localNetworksOnly" because
+  // targetNetworks above intentionally includes testnets — under
+  // "localNetworksOnly" the burner disappears entirely (the check is *every*
+  // target being local), which costs you the fastest way to click through a
+  // local demo without MetaMask. The burner is clearly labelled in the connect
+  // modal; just don't send anything you care about to one.
+  burnerWalletMode: "allNetworks",
 } as const satisfies ScaffoldConfig;
 
 export default scaffoldConfig;
