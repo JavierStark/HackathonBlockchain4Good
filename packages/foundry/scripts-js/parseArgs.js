@@ -82,6 +82,50 @@ try {
 // block is the optional keystore path, kept for anyone who prefers it.
 if (process.env.DEPLOYER_PRIVATE_KEY?.trim()) {
   const { spawnSync: spawnMake } = await import("child_process");
+  const deployerKey = process.env.DEPLOYER_PRIVATE_KEY.trim();
+
+  // On the local chain your account starts with 0 ETH — only Anvil's own ten
+  // built-in accounts are prefunded — so a deploy signed with your key fails
+  // with "Insufficient funds for gas * price + value". Top it up through
+  // Anvil's anvil_setBalance RPC so the *same* account works on localhost and
+  // on testnets, and `yarn account` always shows the address that actually
+  // deploys. (DeployHelpers.s.sol calls vm.deal for this, but that only
+  // affects forge's local simulation, not the real node's state — which is
+  // why the simulation succeeds and the broadcast then fails.)
+  if (network === "localhost") {
+    const deployerAddress = spawnMake(
+      "cast",
+      ["wallet", "address", "--private-key", deployerKey],
+      { encoding: "utf-8" }
+    ).stdout?.trim();
+
+    if (deployerAddress) {
+      try {
+        const res = await fetch("http://127.0.0.1:8545", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: 1,
+            method: "anvil_setBalance",
+            // 10,000 ETH — same as Anvil's own default account balance.
+            params: [deployerAddress, "0x21e19e0c9bab2400000"],
+          }),
+        });
+        const body = await res.json();
+        if (body.error) throw new Error(body.error.message);
+        console.log(
+          `\n💰 Funded ${deployerAddress} with 10000 ETH on the local chain`
+        );
+      } catch (error) {
+        console.log(
+          `\n⚠️  Could not auto-fund ${deployerAddress} locally: ${error.message}` +
+            `\n   Is \`yarn chain\` running? The deploy will fail without ETH.`
+        );
+      }
+    }
+  }
+
   process.env.DEPLOY_SCRIPT = `script/${fileName}`;
   process.env.RPC_URL = network;
   console.log(
