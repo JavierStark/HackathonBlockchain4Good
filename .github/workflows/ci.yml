@@ -48,7 +48,7 @@ jobs:
         working-directory: packages/foundry
         run: forge coverage --report summary --report lcov
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: coverage-lcov
@@ -80,7 +80,7 @@ jobs:
       - name: Build
         run: yarn next:build
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: nextjs-build
@@ -160,7 +160,7 @@ jobs:
       - name: Run e2e smoke suite
         run: yarn e2e
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: playwright-report
