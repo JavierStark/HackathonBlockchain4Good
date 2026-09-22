@@ -29,7 +29,7 @@ on:
         default: script/Deploy.s.sol
 
 permissions:
-  contents: read
+  contents: write
 
 env:
   FOUNDRY_VERSION: v1.8.3
@@ -95,6 +95,22 @@ jobs:
         run: |
           node scripts-js/generateTsAbis.js
           node ../../scripts/record-deployment.mjs
+
+      - name: Commit and push deployment manifest + ABIs
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add packages/nextjs/contracts/deployedContracts.ts packages/foundry/deployments/
+          if git diff --cached --quiet; then
+            echo "No changes to commit (already deployed to this network)"
+          else
+            git commit -m "chore: update deployedContracts.ts + deployment manifest for ${{ inputs.network }}
+
+Deployment: ${{ github.sha }}
+Network: ${{ inputs.network }}
+Triggered by: ${{ github.actor }}"
+            git push
+          fi
 
       - name: Verify contracts
         working-directory: packages/foundry
