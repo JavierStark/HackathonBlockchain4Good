@@ -2102,6 +2102,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@ipld/dag-json@npm:^11.0.0":
+  version: 11.0.1
+  resolution: "@ipld/dag-json@npm:11.0.1"
+  dependencies:
+    cborg: "npm:^6.1.1"
+    multiformats: "npm:^14.0.0"
+  checksum: 10/f894c32b9f4673334f4ee17ef9b468824a39024bceae073e73c5e60af67b826160aad9d57d88ae77d83310b94dd60b8f370dde893836638011bd3df1e8dbe5d3
+  languageName: node
+  linkType: hard
+
 "@ipld/dag-pb@npm:^4.0.0, @ipld/dag-pb@npm:^4.0.2, @ipld/dag-pb@npm:^4.1.5":
   version: 4.2.0
   resolution: "@ipld/dag-pb@npm:4.2.0"
@@ -3929,7 +3939,7 @@ __metadata:
     eslint-config-next: "npm:~16.2.4"
     eslint-config-prettier: "npm:~10.1.8"
     eslint-plugin-prettier: "npm:~5.5.5"
-    kubo-rpc-client: "npm:~6.1.0"
+    kubo-rpc-client: "npm:~7.1.0"
     next: "npm:~16.2.4"
     next-nprogress-bar: "npm:~2.4.7"
     next-themes: "npm:~0.4.6"
@@ -7118,6 +7128,15 @@ __metadata:
   dependencies:
     browser-readablestream-to-it: "npm:^2.0.0"
   checksum: 10/e5e96a54b2a684d8348e81f93ab8ff78ab332101a08f4469ea28e59648ec3fa9239404acfda8d9c41277e84b37591f6ceb29ae7382d53abecf6905f8d6b77efd
+  languageName: node
+  linkType: hard
+
+"blob-to-it@npm:^3.0.0":
+  version: 3.0.0
+  resolution: "blob-to-it@npm:3.0.0"
+  dependencies:
+    browser-readablestream-to-it: "npm:^2.0.0"
+  checksum: 10/3fd989a7c9605ad5dd20d2b525c805ec6d0373ad6272da002d646e472fdacd039b6ff7e9087ae81ccc8c675802b76cd6097f9aa98c599ecd31eaecf976a48c1a
   languageName: node
   linkType: hard
 
@@ -10391,13 +10410,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ipfs-unixfs@npm:^12.0.0":
-  version: 12.0.2
-  resolution: "ipfs-unixfs@npm:12.0.2"
+"ipfs-unixfs@npm:^13.0.0":
+  version: 13.1.1
+  resolution: "ipfs-unixfs@npm:13.1.1"
   dependencies:
-    protons-runtime: "npm:^6.0.1"
-    uint8arraylist: "npm:^2.4.8"
-  checksum: 10/4d10501977fb115c2c7ec7ad505d8643cd1a7b76bdbbf49ceacdd3271bbf5562aced0641684776e26b414c24c1b403cff9a7e2c97a8ad22ac65ed4f928f029a0
+    protons-runtime: "npm:^7.1.1"
+    uint8arraylist: "npm:^3.0.2"
+    uint8arrays: "npm:^6.1.1"
+  checksum: 10/7fff1b301bebf68bdb70fe82a2398ac07a015c182f43a972ddb6dca863bf921f27b9f2fa2143f9704300f73b563cf7d2482ace215aa4003f3804a04a476160a2
   languageName: node
   linkType: hard
 
@@ -11327,12 +11347,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"kubo-rpc-client@npm:~6.1.0":
-  version: 6.1.0
-  resolution: "kubo-rpc-client@npm:6.1.0"
+"kubo-rpc-client@npm:~7.1.0":
+  version: 7.1.0
+  resolution: "kubo-rpc-client@npm:7.1.0"
   dependencies:
-    "@ipld/dag-cbor": "npm:^9.0.0"
-    "@ipld/dag-json": "npm:^10.0.0"
+    "@ipld/dag-cbor": "npm:^10.0.1"
+    "@ipld/dag-json": "npm:^11.0.0"
     "@ipld/dag-pb": "npm:^4.0.0"
     "@libp2p/crypto": "npm:^5.0.0"
     "@libp2p/interface": "npm:^3.0.2"
@@ -11341,12 +11361,12 @@ __metadata:
     "@multiformats/multiaddr": "npm:^13.0.1"
     "@multiformats/multiaddr-to-uri": "npm:^12.0.0"
     any-signal: "npm:^4.1.1"
-    blob-to-it: "npm:^2.0.5"
+    blob-to-it: "npm:^3.0.0"
     browser-readablestream-to-it: "npm:^2.0.5"
     dag-jose: "npm:^5.0.0"
     electron-fetch: "npm:^1.9.1"
     err-code: "npm:^3.0.1"
-    ipfs-unixfs: "npm:^12.0.0"
+    ipfs-unixfs: "npm:^13.0.0"
     iso-url: "npm:^1.2.1"
     it-all: "npm:^3.0.4"
     it-first: "npm:^3.0.4"
@@ -11356,13 +11376,13 @@ __metadata:
     it-peekable: "npm:^3.0.3"
     it-to-stream: "npm:^1.0.0"
     merge-options: "npm:^3.0.4"
-    multiformats: "npm:^13.1.0"
+    multiformats: "npm:^14.0.0"
     nanoid: "npm:^5.0.7"
     parse-duration: "npm:^2.1.2"
     stream-to-it: "npm:^1.0.1"
-    uint8arrays: "npm:^5.0.3"
+    uint8arrays: "npm:^6.1.1"
     wherearewe: "npm:^2.0.1"
-  checksum: 10/ceceaadf24c2a99093aee395269059cf5e3718451edc3bccd928bf7db6b602305d3bdfc0a9050bdea8c2e59889446de66536992aa038f9a8b9c9384968e9b22a
+  checksum: 10/ba8a837563c3b320619b682b26a00eed839bb2e67d7c00a95bfb18b9c6099ab2b98f1f173f135b8667b941d42db5aea3a06bf64205ecb7ee25d36704061c82e4
   languageName: node
   linkType: hard
 
@@ -13890,18 +13910,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"protons-runtime@npm:^6.0.1":
-  version: 6.0.2
-  resolution: "protons-runtime@npm:6.0.2"
-  dependencies:
-    uint8-varint: "npm:^2.0.4"
-    uint8arraylist: "npm:^2.4.8"
-    uint8arrays: "npm:^5.1.0"
-  checksum: 10/c9b4597e4042aee590523db96aa76f2715c09eecfb5377773dfeda4675c7852944576f4e1220bc81801248f7846d8ecbf7e2d62561b0afa3dfa8ea105bc1fbe4
-  languageName: node
-  linkType: hard
-
-"protons-runtime@npm:^7.0.0":
+"protons-runtime@npm:^7.0.0, protons-runtime@npm:^7.1.1":
   version: 7.1.1
   resolution: "protons-runtime@npm:7.1.1"
   dependencies:
@@ -15916,7 +15925,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"uint8-varint@npm:^2.0.1, uint8-varint@npm:^2.0.2, uint8-varint@npm:^2.0.4":
+"uint8-varint@npm:^2.0.1, uint8-varint@npm:^2.0.2":
   version: 2.0.5
   resolution: "uint8-varint@npm:2.0.5"
   dependencies:
