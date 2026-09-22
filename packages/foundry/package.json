@@ -25,7 +25,7 @@
   },
   "dependencies": {
     "dotenv": "~16.3.1",
-    "envfile": "~6.18.0",
+    "envfile": "~7.1.0",
     "ethers": "~5.7.1",
     "prettier": "~2.8.8",
     "qrcode": "~1.5.3",
