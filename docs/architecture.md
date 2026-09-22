@@ -31,11 +31,19 @@ together under one `yarn install`, one lockfile, shared root scripts.
   every per-contract deploy script (`DeployYourContract.s.sol`, etc.) in
   sequence. `VerifyAll.s.sol` handles explorer verification.
 - **`scripts-js/`** — Node helpers invoked by `package.json` scripts:
-  keystore management (`generateKeystore.js`, `importAccount.js`,
-  `selectOrCreateKeystore.js`, `listKeystores.js`, `revealPK.js`), balance
-  display (`checkAccountBalance.js`), and the deploy CLI's argument parsing
-  (`parseArgs.js` — resolves `--network`/`--file`/`--keystore` flags, then
-  shells out to `make deploy-and-generate-abis`).
+  - `account.js` — **the account path this repo actually uses**:
+    `yarn generate` / `yarn account:import 0x<key>` / `yarn account`, all
+    backed by `DEPLOYER_PRIVATE_KEY` in the gitignored `.env`. No password
+    prompt; fully scriptable. See `docs/development.md#windows-notes` for why
+    this replaced keystores as the default, and the trade-off it carries.
+  - `parseArgs.js` — the deploy CLI's argument parsing (resolves
+    `--network`/`--file`/`--keystore`, then shells out to
+    `make deploy-and-generate-abis`). Short-circuits the keystore flow
+    entirely when `DEPLOYER_PRIVATE_KEY` is set.
+  - `generateKeystore.js`, `importAccount.js`, `selectOrCreateKeystore.js`,
+    `listKeystores.js`, `revealPK.js`, `checkAccountBalance.js` — the
+    optional encrypted-keystore path (`yarn account:keystore*`). Kept
+    working, but not the default and not CI-covered.
 - **`Makefile`** — the actual command runner underneath most `yarn` scripts
   here (`chain`, `deploy`, `verify`, `format`, `lint`, `compile`, `flatten`).
   Pinned to Git for Windows' `sh.exe` on Windows — see
