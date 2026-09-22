@@ -8,6 +8,15 @@
   value.
 - Local dev never needs a real private key (Anvil's well-known test accounts
   cover it — see `docs/deployment.md`).
+- **The deployer key is stored in cleartext** in the gitignored
+  `packages/foundry/.env` (`DEPLOYER_PRIVATE_KEY`), not in an encrypted
+  keystore. This is a deliberate trade-off for a hackathon repo where the
+  deployer is a throwaway testnet account — the encrypted-keystore path
+  needs an interactive password prompt that proved unreliable on Windows and
+  cannot be covered by CI (full reasoning in
+  `docs/development.md#windows-notes`). **Never put a key holding real funds
+  in `.env`.** For real-money deployments use a hardware wallet
+  (`forge script --ledger`), not either of these paths.
 - CI secrets live in GitHub repo/environment settings only, injected as
   environment variables into workflow steps, never echoed. If you need to
   confirm a secret resolved correctly, derive something safe from it (e.g.

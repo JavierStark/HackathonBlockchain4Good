@@ -15,13 +15,17 @@ local keystore named `scaffold-eth-default`.
 
 ## Testnet
 
-1. **Get a deployer account.** Never reuse a real wallet's key.
+1. **Get a deployer account.** Never reuse a wallet that holds real funds.
    ```bash
-   yarn generate           # generates a new keystore, prompts for a password
-   # or
-   yarn account:import     # imports an existing (testnet-only) private key
-   yarn account             # shows the address + balance
+   yarn generate                  # new random account, saved to .env
+   # or, to use a wallet you already have (testnet-only):
+   yarn account:import 0x<private-key>
+   yarn account                    # shows the address + balances
    ```
+   The key is stored as `DEPLOYER_PRIVATE_KEY` in `packages/foundry/.env`
+   (gitignored). No password prompt is involved anywhere — see
+   `docs/development.md#windows-notes` for why this is the default instead of
+   Foundry's encrypted keystores, and what the trade-off is.
 2. **Fund it** from a faucet:
    - Sepolia: <https://sepoliafaucet.com> or <https://www.alchemy.com/faucets/ethereum-sepolia>
    - Base Sepolia: <https://www.alchemy.com/faucets/base-sepolia> or bridge Sepolia ETH at <https://bridge.base.org/deposit>

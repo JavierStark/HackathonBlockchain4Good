@@ -37,12 +37,25 @@ FORK_URL ?= mainnet
 
 # Which forge invocation `deploy` runs, chosen entirely by Make itself
 # (ifeq, evaluated when the Makefile is read) rather than a shell if/fi —
-# see the note above for why this matters on Windows. Only the
-# scaffold-eth-default + localhost combination skips the password prompt
-# (via --password, a hardcoded non-secret value — see setup-anvil-wallet);
-# every other combination lets forge prompt interactively, exactly like
-# `yarn account` does, and needs the same real-console access.
-ifeq ($(RPC_URL),localhost)
+# see the note above for why this matters on Windows.
+#
+# Priority order:
+#  1. DEPLOYER_PRIVATE_KEY set (from packages/foundry/.env, loaded by
+#     parseArgs.js before it invokes make) — no keystore, NO INTERACTIVE
+#     PASSWORD PROMPT. This is the default, recommended path: it's the only
+#     one that works identically on every OS and terminal, and the only one
+#     that can be tested non-interactively. See docs/development.md.
+#  2. localhost + scaffold-eth-default — uses --password with the hardcoded
+#     non-secret Anvil password (see setup-anvil-wallet).
+#  3. anything else — a keystore without a supplied password, so forge
+#     prompts interactively. Kept working for people who prefer keystores,
+#     but it is NOT the documented default (see the Windows caveat in
+#     docs/development.md#windows-notes).
+#
+# The deploy recipe is @-prefixed so DEPLOYER_PRIVATE_KEY is never echoed.
+ifneq ($(strip $(DEPLOYER_PRIVATE_KEY)),)
+DEPLOY_CMD = forge script $(DEPLOY_SCRIPT) --rpc-url $(RPC_URL) --private-key $(DEPLOYER_PRIVATE_KEY) --broadcast --ffi
+else ifeq ($(RPC_URL),localhost)
 ifeq ($(ETH_KEYSTORE_ACCOUNT),scaffold-eth-default)
 DEPLOY_CMD = forge script $(DEPLOY_SCRIPT) --rpc-url localhost --password localhost --broadcast --ffi
 else
@@ -70,7 +83,8 @@ fork: setup-anvil-wallet
 # SHELL note above for why deploy deliberately has no POSIX-only syntax left.
 deploy:
 	$(if $(wildcard $(DEPLOY_SCRIPT)),,$(error Deploy script '$(DEPLOY_SCRIPT)' not found))
-	$(DEPLOY_CMD)
+	@echo Deploying $(DEPLOY_SCRIPT) to $(RPC_URL)
+	@$(DEPLOY_CMD)
 
 # Deploy and generate ABIs
 deploy-and-generate-abis: deploy generate-abis record-deployment

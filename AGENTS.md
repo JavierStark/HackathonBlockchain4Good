@@ -53,21 +53,37 @@ fixes are load-bearing — do not revert them without understanding why (see
    parameter (`$1`) on Windows, so the old `${1:-default}` pattern silently
    ignored it and always fell back to localhost. Defaults now live in the
    Makefile itself (`RPC_URL ?= localhost`, `FORK_URL ?= mainnet`).
-4. `packages/foundry/scripts-js/{checkAccountBalance,revealPK}.js` (`yarn account`,
-   `yarn account:reveal-pk`) call cast commands that need an interactive
-   keystore password via `execSync(cmd, { stdio: ["inherit", "pipe", "inherit"] })`,
-   not plain `execSync(cmd)`. `execSync`'s default pipes stdin too, and a
-   piped stdin isn't read as buffered input by cast's password prompt at
-   all — confirmed it just hangs. Symptom before the fix: the password
-   prompt appears, typing + Enter does nothing visible, a second Enter
-   surfaces "incorrect password" even with the right one.
+4. **Accounts use a private key in `.env`, not an encrypted keystore.**
+   `yarn generate` / `yarn account:import` / `yarn account` all go through
+   `packages/foundry/scripts-js/account.js`, which reads and writes
+   `DEPLOYER_PRIVATE_KEY` in the gitignored `packages/foundry/.env`. The
+   Makefile's `deploy` target picks that up and passes `--private-key` to
+   forge. **Nothing prompts for a password anywhere on this path.**
+
+   This replaced Foundry's encrypted-keystore flow as the default after it
+   proved unreliable here: the keystore password prompt is an interactive
+   hidden-input read routed through several layers (yarn shim → node → make
+   → cast), it failed repeatedly on Windows with "incorrect password" even
+   when the password was correct, and — the deciding factor — it cannot be
+   driven non-interactively, so neither CI nor an agent can verify it. The
+   `.env` path behaves identically on every OS and is fully testable.
+   Keystores remain available via `yarn account:keystore*` for anyone who
+   wants them, but they are not the documented default and not CI-covered.
+
+   Trade-off, stated plainly: a cleartext key in a gitignored file is less
+   safe than an encrypted keystore. That is acceptable **only** because this
+   is a hackathon repo where the deployer is a throwaway testnet account.
+   Never put a key with real funds in `.env` — see `docs/security.md`.
 
 ## Golden Rules
 
 - **Never** expose, log, or commit a private key, API key, or `.env*` file.
-- **Never** use a real/mainnet private key for local development — Anvil's
-  well-known test accounts (via `LOCALHOST_KEYSTORE_ACCOUNT=scaffold-eth-default`)
-  cover every local workflow.
+  `DEPLOYER_PRIVATE_KEY` lives in the gitignored `packages/foundry/.env` and
+  must never be echoed — the Makefile's deploy recipe is `@`-prefixed for
+  exactly this reason.
+- **Never** put a private key holding real funds in `.env`. The deployer is a
+  throwaway testnet account (`yarn generate`); local dev doesn't even need
+  that much — Anvil's well-known test accounts cover it.
 - **Never** deploy to `production` (or run `deploy-contracts.yml` with
   `network: production`) without the user's explicit go-ahead — it requires a
   GitHub Environment approval for exactly this reason.
@@ -111,10 +127,10 @@ yarn coverage                 # Solidity coverage report (forge coverage)
 yarn format                # forge fmt + prettier, both packages
 yarn lint                  # forge fmt --check + eslint, both packages
 
-# Accounts (never a real key for local dev)
-yarn generate               # Generate a new deployer keystore
-yarn account:import          # Import an existing private key into a keystore
-yarn account                  # View current deployer account + balance
+# Accounts — TEST WALLETS ONLY, key lives in gitignored packages/foundry/.env
+yarn generate                        # New random deployer account -> .env
+yarn account:import 0x<key>           # Bring your own test key -> .env
+yarn account                           # Show deployer address + balances
 
 # Deploy to a live network (see docs/deployment.md for the full walkthrough)
 yarn deploy --network baseSepolia

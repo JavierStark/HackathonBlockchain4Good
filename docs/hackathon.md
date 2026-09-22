@@ -21,8 +21,10 @@ the exact install steps (native Windows binaries, no WSL needed).
 ## 15-minute setup (through your first testnet deploy)
 
 1. Do the 5-minute setup above.
-2. `yarn generate` — creates a testnet deployer keystore (prompts for a
-   password; **never** import a real/mainnet key here).
+2. `yarn generate` — creates a testnet deployer account, saved to
+   `packages/foundry/.env` (gitignored). No password prompt. To use a wallet
+   you already have instead: `yarn account:import 0x<private-key>`.
+   **Test wallets only** — never a key holding real funds.
 3. Fund it from a faucet — see `docs/deployment.md#testnet` for links.
 4. `yarn deploy --network baseSepolia`
 5. `yarn check-addresses` — confirms the frontend now points at the testnet

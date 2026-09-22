@@ -76,6 +76,24 @@ try {
   process.exit(1);
 }
 
+// Default path: a DEPLOYER_PRIVATE_KEY in .env (see scripts-js/account.js).
+// Skip the whole keystore/password flow — the Makefile picks the private-key
+// branch up from the environment, and nothing prompts. Everything below this
+// block is the optional keystore path, kept for anyone who prefers it.
+if (process.env.DEPLOYER_PRIVATE_KEY?.trim()) {
+  const { spawnSync: spawnMake } = await import("child_process");
+  process.env.DEPLOY_SCRIPT = `script/${fileName}`;
+  process.env.RPC_URL = network;
+  console.log(
+    `\n🚀 Deploying to ${network} using DEPLOYER_PRIVATE_KEY from .env`
+  );
+  const keyResult = spawnMake("make", ["deploy-and-generate-abis"], {
+    stdio: "inherit",
+    shell: true,
+  });
+  process.exit(keyResult.status ?? 1);
+}
+
 if (
   process.env.LOCALHOST_KEYSTORE_ACCOUNT !== "scaffold-eth-default" &&
   network === "localhost"

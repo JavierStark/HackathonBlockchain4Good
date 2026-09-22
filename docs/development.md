@@ -60,20 +60,39 @@ summarized in `AGENTS.md`:
    separately), so `yarn workspace @se-2/foundry verify RPC_URL=baseSepolia`
    works identically on every OS — it becomes `make verify RPC_URL=baseSepolia`,
    a plain Make command-line variable override, not a shell trick.
-4. **Interactive password prompts need inherited stdin, not `execSync`'s
-   default.** `yarn account` (`checkAccountBalance.js`) and
-   `yarn account:reveal-pk` (`revealPK.js`) both called a password-protected
-   `cast` command via plain `execSync(cmd)`. Node's `execSync` pipes stdin by
-   default (not inherited from the parent terminal); confirmed a piped stdin
-   just hangs rather than being read as buffered input by cast's password
-   prompt at all. Symptom: the prompt appears, typing the password and
-   pressing Enter visibly does nothing, a second Enter surfaces "incorrect
-   password" — even with the right one. Fix:
-   `execSync(cmd, { stdio: ["inherit", "pipe", "inherit"] })` — inherit
-   stdin/stderr so the real prompt works, pipe only stdout to still capture
-   the result. Not confirmed Windows-only (the same `execSync` default
-   applies on macOS/Linux too), but that's where it was actually hit and
-   fixed.
+4. **Accounts avoid interactive password prompts entirely.** This one isn't a
+   fix so much as a design decision forced by repeated failures, and it's
+   worth reading before anyone "restores" keystores as the default.
+
+   Foundry's encrypted keystores need an interactive hidden-password prompt.
+   On Windows that read is routed through several layers (yarn shim → node →
+   make → cast), and it failed repeatedly in practice: the prompt appears,
+   typing the correct password and pressing Enter does nothing visible, a
+   second Enter reports "incorrect password". Three separate plausible
+   causes were found and fixed along the way — `execSync` piping stdin
+   instead of inheriting it, the Makefile's global `SHELL` override routing
+   every recipe through Git Bash's MSYS2 pty, and an unnecessary
+   `shell: true` wrapping `cast` — and the prompt *still* didn't work
+   reliably.
+
+   The deciding factor wasn't the failures themselves but that the
+   interactive path **cannot be driven non-interactively**: it can't be
+   covered by CI, and an agent can't verify a fix to it without a human in
+   the loop. So the default moved to `DEPLOYER_PRIVATE_KEY` in the
+   gitignored `packages/foundry/.env`, managed by
+   `packages/foundry/scripts-js/account.js` (`yarn generate`,
+   `yarn account:import 0x<key>`, `yarn account`). No prompt, identical on
+   every OS, and every path is verifiable in one command.
+
+   Keystores still work via `yarn account:keystore*` if you prefer them.
+   They are not the documented default and not CI-covered.
+
+   **Trade-off, stated plainly:** a cleartext key in a gitignored file is
+   less safe than an encrypted keystore. That's acceptable here *only*
+   because the deployer is a throwaway testnet account for a hackathon.
+   Never put a key with real funds in `.env`. If you need real-money
+   security, use a hardware wallet (`forge script --ledger`) rather than
+   either of these paths.
 
 If you hit a new platform-specific issue, the pattern that found these four
 was: run the exact command, don't assume; when something "should" work per
