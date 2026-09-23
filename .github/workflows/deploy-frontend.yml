@@ -64,17 +64,6 @@ jobs:
         working-directory: packages/nextjs
         run: vercel pull --yes --environment=${{ github.ref == 'refs/heads/main' && 'production' || 'preview' }} --token="$VERCEL_TOKEN"
 
-      # TEMP DIAGNOSTIC — remove once the deploy step's "File does not exist"
-      # error is root-caused. project.json/settings only contain org/project
-      # ids, not the token, so this is safe to print.
-      - name: Debug — show pulled project settings
-        working-directory: packages/nextjs
-        run: |
-          echo "--- .vercel/project.json ---"
-          cat .vercel/project.json || true
-          echo "--- .vercel/output/config.json (after build, if present) ---"
-          find .vercel -type f -name "*.json" || true
-
       - name: Build (production)
         if: github.ref == 'refs/heads/main'
         working-directory: packages/nextjs
@@ -84,14 +73,6 @@ jobs:
         if: github.ref != 'refs/heads/main'
         working-directory: packages/nextjs
         run: vercel build --token="$VERCEL_TOKEN"
-
-      - name: Debug — show build output structure
-        working-directory: packages/nextjs
-        run: |
-          echo "--- .vercel/output/config.json ---"
-          cat .vercel/output/config.json || true
-          echo "--- .next dir contents (top level) ---"
-          ls -la .next || true
 
       - name: Deploy (production)
         if: github.ref == 'refs/heads/main'
