@@ -60,34 +60,36 @@ jobs:
       - name: Install Vercel CLI
         run: npm install -g vercel@latest
 
+      # Run Vercel CLI from the repo root (not cd'd into packages/nextjs) and
+      # point it at the app directory explicitly. next.config.ts sets
+      # turbopack.root to the monorepo root so Next.js resolves the workspace
+      # correctly; running the CLI from that same root keeps its own path
+      # resolution consistent with Next's, which cd-ing into the subfolder
+      # does not (it previously caused "File does not exist: .next/package.json"
+      # during `vercel deploy --prebuilt`).
       - name: Pull Vercel environment
-        working-directory: packages/nextjs
-        run: vercel pull --yes --environment=${{ github.ref == 'refs/heads/main' && 'production' || 'preview' }} --token="$VERCEL_TOKEN"
+        run: vercel pull --yes --environment=${{ github.ref == 'refs/heads/main' && 'production' || 'preview' }} --token="$VERCEL_TOKEN" packages/nextjs
 
       - name: Build (production)
         if: github.ref == 'refs/heads/main'
-        working-directory: packages/nextjs
-        run: vercel build --prod --token="$VERCEL_TOKEN"
+        run: vercel build --prod --token="$VERCEL_TOKEN" packages/nextjs
 
       - name: Build (preview)
         if: github.ref != 'refs/heads/main'
-        working-directory: packages/nextjs
-        run: vercel build --token="$VERCEL_TOKEN"
+        run: vercel build --token="$VERCEL_TOKEN" packages/nextjs
 
       - name: Deploy (production)
         if: github.ref == 'refs/heads/main'
         id: deploy-prod
-        working-directory: packages/nextjs
         run: |
-          url=$(vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN")
+          url=$(vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN" packages/nextjs)
           echo "url=$url" >> "$GITHUB_OUTPUT"
 
       - name: Deploy (preview)
         if: github.ref != 'refs/heads/main'
         id: deploy-preview
-        working-directory: packages/nextjs
         run: |
-          url=$(vercel deploy --prebuilt --token="$VERCEL_TOKEN")
+          url=$(vercel deploy --prebuilt --token="$VERCEL_TOKEN" packages/nextjs)
           echo "url=$url" >> "$GITHUB_OUTPUT"
 
       - name: Comment preview URL on PR
