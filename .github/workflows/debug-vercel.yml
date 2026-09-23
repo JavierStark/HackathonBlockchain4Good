@@ -1,0 +1,24 @@
+name: Debug Vercel Project
+on:
+  workflow_dispatch: {}
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check project settings
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+        run: |
+          curl -s -H "Authorization: Bearer $VERCEL_TOKEN" \
+            "https://api.vercel.com/v9/projects/$VERCEL_PROJECT_ID?teamId=$VERCEL_ORG_ID" \
+            | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+print('name:', d.get('name'))
+print('rootDirectory:', d.get('rootDirectory'))
+print('framework:', d.get('framework'))
+print('outputDirectory:', d.get('outputDirectory'))
+print('buildCommand:', d.get('buildCommand'))
+"
