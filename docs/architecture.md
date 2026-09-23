@@ -71,7 +71,14 @@ together under one `yarn install`, one lockfile, shared root scripts.
   supported way to talk to contracts from the frontend (see `AGENTS.md`).
 - **`scaffold.config.ts`** — single source of truth for `targetNetworks`
   (which chains the app supports), polling interval, RPC overrides, burner
-  wallet visibility.
+  wallet visibility. `targetNetworks[0]` is also the network the app defaults
+  to *before* a wallet connects (`services/store/store.ts`) — that's what
+  decides which network's entry in `deployedContracts.ts` the Debug
+  Contracts/Block Explorer/Faucet pages look for on first load. It's
+  `baseSepolia` by default (the live deployment's network) except when
+  `NEXT_PUBLIC_E2E_LOCAL_NETWORK=true`, which `e2e/global-setup.ts` sets on
+  its own build so the Debug page finds the fresh local Anvil deployment it
+  just made instead.
 - **`e2e/`** — Playwright smoke suite; see its own README for the
   deploy→build→serve ordering constraint.
 

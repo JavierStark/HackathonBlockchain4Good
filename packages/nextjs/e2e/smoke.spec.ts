@@ -5,7 +5,7 @@ import { expect, test } from "@playwright/test";
 
 test("home page loads", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByText("Scaffold-ETH 2")).toBeVisible();
+  await expect(page.getByText("HackathonBlockchain4Good")).toBeVisible();
 });
 
 test("wallet connect UI is present", async ({ page }) => {

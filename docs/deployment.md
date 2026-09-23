@@ -36,6 +36,20 @@ local keystore named `scaffold-eth-default`.
    ```
    This compiles, deploys, regenerates `packages/nextjs/contracts/deployedContracts.ts`,
    and writes `packages/foundry/deployments/<chainId>.json`.
+
+   > ⚠️ **This regeneration is not additive.** `deployedContracts.ts` is
+   > rebuilt from `packages/foundry/broadcast/` (gitignored, local-only), so
+   > it only ever contains the networks *your current checkout* has deployed
+   > to. Deploying to `baseSepolia` via GitHub Actions, then running `yarn
+   > deploy` (defaults to `localhost`) or `yarn e2e` on your own machine —
+   > which has never locally deployed to `baseSepolia` — will silently drop
+   > the `baseSepolia` entry from `deployedContracts.ts` and replace it with
+   > `localhost`'s. `git diff` before committing after any local deploy, and
+   > `git checkout -- packages/nextjs/contracts/deployedContracts.ts` to
+   > discard an accidental overwrite. This is exactly why
+   > `deploy-contracts.yml` commits its own output straight back to `main`
+   > (see below) instead of relying on a human to do it from a
+   > possibly-incomplete local `broadcast/` history.
 4. **Verify:**
    ```bash
    yarn workspace @se-2/foundry verify RPC_URL=baseSepolia
@@ -57,6 +71,15 @@ the network, it compiles + tests first, deploys, verifies, and publishes the
 deployment manifest as a downloadable artifact + a step summary. Needs
 `DEPLOYER_PRIVATE_KEY` (and the relevant `*_API_KEY`) set as repo secrets
 first (Settings → Secrets and variables → Actions).
+
+**It also commits the regenerated `deployedContracts.ts` and
+`deployments/<chainId>.json` straight back to `main`** (as `github-actions[bot]`),
+so you don't have to deploy locally just to get those files checked in — a
+push you didn't make will show up after a successful run. That push in turn
+triggers `deploy-frontend.yml` and `ci.yml` automatically (both watch `main`),
+so the live frontend picks up the new contract address without any extra
+step. No commit happens if nothing changed (e.g. redeploying to a network
+that's already up to date).
 
 ## Production
 

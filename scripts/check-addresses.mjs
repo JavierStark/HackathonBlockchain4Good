@@ -14,11 +14,26 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const DEPLOYMENTS_DIR = join(__dirname, "..", "packages", "foundry", "deployments");
 const DEPLOYED_CONTRACTS_TS = join(__dirname, "..", "packages", "nextjs", "contracts", "deployedContracts.ts");
 
+// Manifests matching a pattern in deployments/.gitignore (currently just
+// 31337.json, the local Anvil chain) are local-only by design — their
+// absence from the committed deployedContracts.ts is expected, not drift.
+function loadGitignoredManifestNames() {
+  const gitignorePath = join(DEPLOYMENTS_DIR, ".gitignore");
+  if (!existsSync(gitignorePath)) return new Set();
+  return new Set(
+    readFileSync(gitignorePath, "utf8")
+      .split("\n")
+      .map(line => line.trim())
+      .filter(line => line && !line.startsWith("#")),
+  );
+}
+
 function loadManifests() {
   if (!existsSync(DEPLOYMENTS_DIR)) return {};
+  const gitignoredNames = loadGitignoredManifestNames();
   const manifests = {};
   for (const file of readdirSync(DEPLOYMENTS_DIR)) {
-    if (!file.endsWith(".json")) continue;
+    if (!file.endsWith(".json") || gitignoredNames.has(file)) continue;
     const chainId = file.replace(".json", "");
     try {
       const data = JSON.parse(readFileSync(join(DEPLOYMENTS_DIR, file), "utf8"));
@@ -73,7 +88,22 @@ function main() {
 
   for (const [chainId, contracts] of Object.entries(manifests)) {
     const frontendChain = frontendContracts[chainId];
-    if (!frontendChain) continue; // frontend hasn't been generated for this chain (yet) — not a drift
+    if (!frontendChain) {
+      // A manifest file existing on disk with zero corresponding entry in
+      // deployedContracts.ts is drift, not "not generated yet" — this is
+      // exactly what happens if `yarn deploy`/`yarn e2e` ran locally for a
+      // network whose broadcast/ history isn't on this machine (e.g. a
+      // network only ever deployed via CI): deployedContracts.ts gets
+      // rebuilt from local broadcast/ alone and silently drops every chain
+      // that isn't in it, even though its deployments/<chainId>.json manifest
+      // is still sitting right there. See docs/deployment.md's warning under
+      // "Testnet" step 3.
+      mismatches.push(
+        `chain ${chainId}: has a deployments/${chainId}.json manifest but no entry at all in deployedContracts.ts ` +
+          `(likely wiped by a local 'yarn deploy'/'yarn e2e' run on a machine without this chain's broadcast/ history)`,
+      );
+      continue;
+    }
     chainsChecked.add(chainId);
 
     for (const [name, info] of Object.entries(contracts)) {
