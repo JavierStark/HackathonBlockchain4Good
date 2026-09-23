@@ -106,11 +106,10 @@ jobs:
           if git diff --cached --quiet; then
             echo "No changes to commit (already deployed to this network)"
           else
-            git commit -m "chore: update deployedContracts.ts + deployment manifest for ${{ inputs.network }}
-
-Deployment: ${{ github.sha }}
-Network: ${{ inputs.network }}
-Triggered by: ${{ github.actor }}"
+            git commit -m "chore: update deployedContracts.ts and deployment manifest for ${{ inputs.network }}" \
+              -m "Deployment commit: ${{ github.sha }}" \
+              -m "Network: ${{ inputs.network }}" \
+              -m "Triggered by: ${{ github.actor }}"
             git push
           fi
 
