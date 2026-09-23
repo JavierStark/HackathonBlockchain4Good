@@ -78,13 +78,17 @@ jobs:
         if: github.ref == 'refs/heads/main'
         id: deploy-prod
         working-directory: packages/nextjs
-        run: echo "url=$(vercel deploy --prebuilt --prod --token=\"$VERCEL_TOKEN\")" >> "$GITHUB_OUTPUT"
+        run: |
+          url=$(vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN")
+          echo "url=$url" >> "$GITHUB_OUTPUT"
 
       - name: Deploy (preview)
         if: github.ref != 'refs/heads/main'
         id: deploy-preview
         working-directory: packages/nextjs
-        run: echo "url=$(vercel deploy --prebuilt --token=\"$VERCEL_TOKEN\")" >> "$GITHUB_OUTPUT"
+        run: |
+          url=$(vercel deploy --prebuilt --token="$VERCEL_TOKEN")
+          echo "url=$url" >> "$GITHUB_OUTPUT"
 
       - name: Comment preview URL on PR
         if: github.ref != 'refs/heads/main'
