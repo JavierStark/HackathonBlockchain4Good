@@ -14,12 +14,6 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: path.join(__dirname, "..", ".."),
   },
-  // Same pin for Next's (webpack-based) file-tracing, which `vercel build`'s
-  // Next.js builder uses when producing `.vercel/output` for a monorepo.
-  // Without this, Vercel CLI's prebuilt deploy can fail looking for a
-  // `.next/package.json` witness file it expects when it can't otherwise
-  // determine the workspace root: https://nextjs.org/docs/app/api-reference/config/next-config-js/output#automatically-copying-traced-files
-  outputFileTracingRoot: path.join(__dirname, "..", ".."),
   // RainbowKit's Base Account wallet connector transitively pulls in
   // Coinbase's @coinbase/cdp-sdk, whose x402 payment module references
   // @x402/core / @x402/evm as optional dependencies we don't (and don't need
