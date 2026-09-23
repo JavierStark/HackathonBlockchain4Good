@@ -13,13 +13,25 @@ export type ScaffoldConfig = BaseConfig;
 
 export const DEFAULT_ALCHEMY_API_KEY = "IZYEU2cWBgnFmgiTAgpWD";
 
+// targetNetworks[0] is what the frontend defaults to before a wallet connects
+// (see services/store/store.ts) — it decides which network's entry in
+// deployedContracts.ts the Debug Contracts / Block Explorer / Faucet pages
+// look for. That needs to be baseSepolia for a live deployment (the only
+// chain with a deployed contract — see deployedContracts.ts) but foundry for
+// e2e/local dev, where packages/nextjs/e2e/global-setup.ts deploys fresh to
+// local Anvil on every run and bakes *that* deployment into the build.
+// NEXT_PUBLIC_E2E_LOCAL_NETWORK is set only by that build invocation.
+const isE2eLocalBuild = process.env.NEXT_PUBLIC_E2E_LOCAL_NETWORK === "true";
+
 const scaffoldConfig = {
-  // The networks on which your DApp is live.
-  // foundry (local Anvil) first for iteration speed; baseSepolia is the hackathon's
-  // primary testnet target; sepolia kept alongside for L1-only integrations.
-  // Add/remove chains here — the frontend (network selector, RPC, burner wallet
-  // visibility) derives entirely from this array, nothing is hardcoded elsewhere.
-  targetNetworks: [chains.foundry, chains.baseSepolia, chains.sepolia],
+  // The networks on which your DApp is live. baseSepolia is the hackathon's
+  // primary testnet target; sepolia kept alongside for L1-only integrations;
+  // foundry (local Anvil) for local dev/e2e. Add/remove chains here — the
+  // frontend (network selector, RPC, burner wallet visibility) derives
+  // entirely from this array, nothing is hardcoded elsewhere.
+  targetNetworks: isE2eLocalBuild
+    ? ([chains.foundry, chains.baseSepolia, chains.sepolia] as const)
+    : ([chains.baseSepolia, chains.foundry, chains.sepolia] as const),
   // The interval at which your front-end polls the RPC servers for new data (it has no effect if you only target the local network (default is 4000))
   pollingInterval: 3000,
   // This is ours Alchemy's default API key.

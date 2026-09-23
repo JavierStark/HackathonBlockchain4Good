@@ -45,11 +45,12 @@ async function pollUntil(
   throw new Error(`${label} did not become ready at ${url} within ${timeoutMs}ms`);
 }
 
-function runBlocking(cwd: string, command: string): void {
+function runBlocking(cwd: string, command: string, env?: Record<string, string>): void {
+  const mergedEnv = env ? { ...process.env, ...env } : undefined;
   if (isWindows) {
-    execFileSync(comspec, ["/d", "/s", "/c", command], { cwd, stdio: "inherit" });
+    execFileSync(comspec, ["/d", "/s", "/c", command], { cwd, stdio: "inherit", env: mergedEnv });
   } else {
-    execFileSync("sh", ["-c", command], { cwd, stdio: "inherit" });
+    execFileSync("sh", ["-c", command], { cwd, stdio: "inherit", env: mergedEnv });
   }
 }
 
@@ -85,7 +86,10 @@ export default async function globalSetup() {
   console.log("[e2e] ✅ Deployed — deployedContracts.ts now reflects this exact deployment");
 
   console.log("[e2e] Building the frontend against this deployment (cold build can take a few minutes) …");
-  runBlocking(NEXTJS_ROOT, "yarn build");
+  // Tells scaffold.config.ts to default to foundry (this local deployment)
+  // instead of baseSepolia — see the comment there for why the two builds
+  // need different defaults.
+  runBlocking(NEXTJS_ROOT, "yarn build", { NEXT_PUBLIC_E2E_LOCAL_NETWORK: "true" });
   console.log("[e2e] ✅ Build complete");
 
   console.log("[e2e] Starting the production server …");
