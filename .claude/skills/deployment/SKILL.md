@@ -41,8 +41,18 @@ worth repeating twice.
 1. `packages/foundry/deployments/<chainId>.json` and
    `packages/nextjs/contracts/deployedContracts.ts` are regenerated together
    automatically (`yarn deploy` → `make deploy-and-generate-abis` →
-   `record-deployment`) — never hand-edit either.
-2. `yarn check-addresses` — fails loudly if they ever disagree.
+   `record-deployment`) — never hand-edit either. If the deploy ran via
+   `deploy-contracts.yml`, it also commits those regenerated files straight
+   back to `main` for you. If you deployed locally instead, commit them
+   yourself — and be aware that regeneration is not additive: it's rebuilt
+   from `packages/foundry/broadcast/` (gitignored, local-only), so running a
+   local deploy/e2e on a machine that has never itself deployed to some other
+   already-live network will silently drop that network's entry from
+   `deployedContracts.ts`. `git diff` before committing. See
+   `docs/deployment.md`'s warning under "Testnet" for the full explanation.
+2. `yarn check-addresses` — fails loudly if they ever disagree, including a
+   chain present in `deployments/` but missing entirely from
+   `deployedContracts.ts` (exactly the failure mode above).
 3. Confirm verification succeeded (or note that it didn't and why —
    `deploy-contracts.yml`'s verify step is `continue-on-error`, since a failed
    verification shouldn't undo a successful deploy, but it shouldn't go

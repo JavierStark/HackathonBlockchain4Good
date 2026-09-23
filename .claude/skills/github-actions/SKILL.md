@@ -17,7 +17,13 @@ description: Use when adding to or modifying this repo's CI/CD workflows in .git
   or merge. Requires picking a network; `network: production` maps to the
   `production` GitHub Environment (needs that Environment's required
   reviewers configured — see `docs/deployment.md` for the one-time repo
-  setting this can't do itself).
+  setting this can't do itself). `permissions: contents: write` (the only
+  workflow in this repo that needs it) — after a successful deploy it
+  commits the regenerated `deployedContracts.ts` and
+  `deployments/<chainId>.json` straight back to `main` as
+  `github-actions[bot]`, which in turn triggers `ci.yml` and
+  `deploy-frontend.yml` via their own push triggers. See
+  `docs/deployment.md`'s "Via GitHub Actions instead" section.
 - **`deploy-frontend.yml`** — Vercel preview on PRs, production on push to
   `main`. Skips cleanly (not a failure) if Vercel secrets aren't configured.
 - **`pages.yml`** — optional GitHub Pages fallback, manual dispatch only. Do
