@@ -64,22 +64,20 @@ jobs:
         working-directory: packages/nextjs
         run: vercel pull --yes --environment=${{ github.ref == 'refs/heads/main' && 'production' || 'preview' }} --token="$VERCEL_TOKEN"
 
-      - name: Build (production)
-        if: github.ref == 'refs/heads/main'
-        working-directory: packages/nextjs
-        run: vercel build --prod --token="$VERCEL_TOKEN"
-
-      - name: Build (preview)
-        if: github.ref != 'refs/heads/main'
-        working-directory: packages/nextjs
-        run: vercel build --token="$VERCEL_TOKEN"
-
+      # Single-step deploy (build happens remotely on Vercel) instead of a
+      # local `vercel build` + `vercel deploy --prebuilt` two-step. The
+      # two-step form consistently failed here with
+      # `Error: File does not exist: "packages/nextjs/.next/package.json"`
+      # regardless of Next's file-tracing/workspace-root config — a known
+      # rough edge for yarn-workspace monorepos passing prebuilt output
+      # between separate CLI invocations. Letting Vercel build in the same
+      # pass as the deploy sidesteps that local build-artifact handoff.
       - name: Deploy (production)
         if: github.ref == 'refs/heads/main'
         id: deploy-prod
         working-directory: packages/nextjs
         run: |
-          url=$(vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN")
+          url=$(vercel deploy --prod --token="$VERCEL_TOKEN")
           echo "url=$url" >> "$GITHUB_OUTPUT"
 
       - name: Deploy (preview)
@@ -87,7 +85,7 @@ jobs:
         id: deploy-preview
         working-directory: packages/nextjs
         run: |
-          url=$(vercel deploy --prebuilt --token="$VERCEL_TOKEN")
+          url=$(vercel deploy --token="$VERCEL_TOKEN")
           echo "url=$url" >> "$GITHUB_OUTPUT"
 
       - name: Comment preview URL on PR
