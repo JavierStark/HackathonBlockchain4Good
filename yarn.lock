@@ -3895,7 +3895,7 @@ __metadata:
   resolution: "@se-2/foundry@workspace:packages/foundry"
   dependencies:
     dotenv: "npm:~16.3.1"
-    envfile: "npm:~6.18.0"
+    envfile: "npm:~7.1.0"
     ethers: "npm:~5.7.1"
     prettier: "npm:~2.8.8"
     qrcode: "npm:~1.5.3"
@@ -8307,12 +8307,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"envfile@npm:~6.18.0":
-  version: 6.18.0
-  resolution: "envfile@npm:6.18.0"
+"envfile@npm:~7.1.0":
+  version: 7.1.0
+  resolution: "envfile@npm:7.1.0"
   bin:
     envfile: bin.cjs
-  checksum: 10/c3851a3bfdfe82fbfe39288a9a77abcff859671fccda322339e5c77389cd97580110b8cc502e6a702e33be0a896357efed61ac2b4b42c0afd16c0bf1e2fbe8f2
+  checksum: 10/a8f4bfc38003026e1841d36cbfd4095c98d4a8fa4dc34a21bfd65af6d80aad6c2c390d32131f25ce6231374c9a834410aae841fd2f0652273977f6dff757e839
   languageName: node
   linkType: hard
 
